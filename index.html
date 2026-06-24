@@ -310,6 +310,33 @@
   .ic-btn.is-locked .ic-val { color: var(--red); }
   .ic-btn.is-open   .ic-val { color: var(--grn); }
 
+  /* ── LOCK MODE ── */
+  .locked {
+    border-color: var(--warn) !important;
+    background: rgba(251,191,36,0.12) !important;
+    box-shadow: 0 0 12px rgba(251,191,36,0.35);
+    position: relative;
+  }
+  .locked .ic-val { color: var(--warn) !important; }
+  .ic-btn.locked::after {
+    content: 'LOCK';
+    position: absolute;
+    top: 4px; right: 5px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.42rem;
+    color: var(--warn);
+    letter-spacing: 0.08em;
+  }
+  .mode-pill.locked::after {
+    content: 'LOCK';
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--warn);
+    letter-spacing: 0.08em;
+    margin-left: 6px;
+  }
+  .mode-pill.locked .mode-pill-val { color: var(--warn) !important; }
+
   /* ── ACCORDION ── */
   .accordion {
     margin: 0 20px 10px;
@@ -555,7 +582,7 @@
 
 <!-- Mode + KM + Icons -->
 <div class="status-strip">
-  <div class="mode-pill needs-conn" onclick="cycleGear()">
+  <div class="mode-pill needs-conn" id="mode-pill">
     <span class="mode-pill-lbl">MODUS</span>
     <span class="mode-pill-val gear-normal" id="s-gear">—</span>
   </div>
@@ -567,7 +594,7 @@
 
 <div class="icon-row needs-conn">
 
-  <div class="ic-btn" id="card-light" onclick="toggleLight()">
+  <div class="ic-btn" id="card-light">
     <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
       <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
     </svg>
@@ -575,7 +602,7 @@
     <span class="ic-val" id="t-light">AUS</span>
   </div>
 
-  <div class="ic-btn" id="card-lock" onclick="toggleLock()">
+  <div class="ic-btn" id="card-lock">
     <svg viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="1.5">
       <rect x="5" y="11" width="14" height="10" rx="2"/>
       <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
@@ -584,7 +611,7 @@
     <span class="ic-val" id="t-lock">OFFEN</span>
   </div>
 
-  <div class="ic-btn" id="card-cruise" onclick="toggleCruise()">
+  <div class="ic-btn" id="card-cruise">
     <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
       <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="2"/>
     </svg>
@@ -592,7 +619,7 @@
     <span class="ic-val" id="t-cruise">AUS</span>
   </div>
 
-  <div class="ic-btn" id="card-start" onclick="toggleStart()">
+  <div class="ic-btn" id="card-start">
     <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
     </svg>
@@ -761,12 +788,12 @@ async function connectBLE() {
     await writeChar.writeValueWithoutResponse(makeCmd('FF550100'));
     log('Verbunden!', 'sys');
 
-    keepaliveTimer = setInterval(async () => {
+    keepaliveTimer = setInterval(() => {
       if (connected) {
-        try { await writeChar.writeValueWithoutResponse(makeCmd('FF550100')); }
+        try { writeChar.writeValueWithoutResponse(makeCmd('FF550100')); }
         catch(e) {}
       }
-    }, 3000);
+    }, 200);
 
   } catch(e) {
     log('Fehler: ' + e.message, 'err');
@@ -815,10 +842,26 @@ function setGear(g) {
   el.className = 'mode-pill-val ' + (GEAR_CLASS[g] ?? 'gear-normal');
 }
 
-function toggleLight()  { send(lightOn   ? 'FF55240100' : 'FF55240101'); }
-function toggleLock()   { send(locked    ? 'FF55170101' : 'FF55170102'); }
-function toggleCruise() { send(cruiseOn  ? 'FF551D0102' : 'FF551D0101'); }
-function toggleStart()  { send(kickStart ? 'FF551A0101' : 'FF551A0102'); }
+function toggleLight() {
+  lightOn = !lightOn;
+  send(lightOn ? 'FF55240101' : 'FF55240100');
+  setToggleCard('card-light', 't-light', lightOn ? 'is-on' : '', lightOn ? 'AN' : 'AUS');
+}
+function toggleLock() {
+  locked = !locked;
+  send(locked ? 'FF55170102' : 'FF55170101');
+  setToggleCard('card-lock', 't-lock', locked ? 'is-locked' : 'is-open', locked ? 'GESPERRT' : 'OFFEN');
+}
+function toggleCruise() {
+  cruiseOn = !cruiseOn;
+  send(cruiseOn ? 'FF551D0101' : 'FF551D0102');
+  setToggleCard('card-cruise', 't-cruise', cruiseOn ? 'is-on' : '', cruiseOn ? 'AN' : 'AUS');
+}
+function toggleStart() {
+  kickStart = !kickStart;
+  send(kickStart ? 'FF551A0102' : 'FF551A0101');
+  setToggleCard('card-start', 't-start', kickStart ? 'is-on' : '', kickStart ? 'KICK' : 'ZERO');
+}
 
 // ── RX Table ─────────────────────────────────────
 const CMD_NAMES = {
@@ -979,7 +1022,8 @@ function setText(id, val) {
 
 function setToggleCard(cardId, stateId, activeClass, stateText) {
   const card = document.getElementById(cardId);
-  card.className = 'ic-btn' + (activeClass ? ' ' + activeClass : '');
+  const isLockMode = card.classList.contains('locked');
+  card.className = 'ic-btn' + (activeClass ? ' ' + activeClass : '') + (isLockMode ? ' locked' : '');
   setText(stateId, stateText);
 }
 
@@ -1009,6 +1053,59 @@ function log(msg, cls = 'sys') {
 }
 
 
+// ── Spam Mode ────────────────────────────────────
+const lockIntervals = {};
+
+function toggleLockMode(id, lockFnFactory) {
+  if (lockIntervals[id]) {
+    clearInterval(lockIntervals[id]);
+    delete lockIntervals[id];
+    document.getElementById(id).classList.remove('locked');
+  } else {
+    const fn = lockFnFactory(); // capture current state once
+    fn();
+    lockIntervals[id] = setInterval(fn, 50);
+    document.getElementById(id).classList.add('locked');
+  }
+}
+
+function addHoldBehavior(id, tapFn, lockFnFactory) {
+  const el = document.getElementById(id);
+  let timer = null;
+  let didHold = false;
+
+  el.addEventListener('pointerdown', (e) => {
+    didHold = false;
+    timer = setTimeout(() => {
+      didHold = true;
+      toggleLockMode(id, lockFnFactory);
+    }, 450);
+  });
+
+  el.addEventListener('pointerup', () => {
+    clearTimeout(timer);
+    if (!didHold) {
+      tapFn();
+      if (lockIntervals[id]) {
+        // restart spam with updated state
+        clearInterval(lockIntervals[id]);
+        const fn = lockFnFactory();
+        fn();
+        lockIntervals[id] = setInterval(fn, 50);
+      }
+    }
+    didHold = false;
+  });
+
+  el.addEventListener('pointercancel', () => {
+    clearTimeout(timer);
+    didHold = false;
+  });
+
+  // Prevent context menu on long press (mobile)
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
 // ── Init ─────────────────────────────────────────
 setConnectedUI(false);
 drawTicks();
@@ -1017,6 +1114,18 @@ updateSpeedo(0);
 document.getElementById('custom-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendCustom();
 });
+
+// tap = normal toggle, hold = spam factory (captures state at hold time)
+addHoldBehavior('mode-pill',   cycleGear,
+  () => { const h = currentGear.toString(16).padStart(2,'0').toUpperCase(); return () => send('FF551F01' + h); });
+addHoldBehavior('card-light',  toggleLight,
+  () => { const cmd = lightOn   ? 'FF55240101' : 'FF55240100'; return () => send(cmd); });
+addHoldBehavior('card-lock',   toggleLock,
+  () => { const cmd = locked    ? 'FF55170102' : 'FF55170101'; return () => send(cmd); });
+addHoldBehavior('card-cruise', toggleCruise,
+  () => { const cmd = cruiseOn  ? 'FF551D0101' : 'FF551D0102'; return () => send(cmd); });
+addHoldBehavior('card-start',  toggleStart,
+  () => { const cmd = kickStart ? 'FF551A0102' : 'FF551A0101'; return () => send(cmd); });
 </script>
 </body>
 </html>
