@@ -2,452 +2,669 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#08080f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>G2 Master</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap');
 
   :root {
-    --bg:    #0A0A0A;
-    --card:  #131313;
-    --acc:   #00E5FF;
-    --acc2:  #FF3D71;
-    --dim:   #2A2A2A;
-    --dimtx: #444;
-    --fg:    #C8C8C8;
-    --grn:   #00FF88;
-    --red:   #FF4444;
+    --bg:      #08080f;
+    --card:    #0f0f1a;
+    --card2:   #13131e;
+    --border:  #1c1c2e;
+    --acc:     #22d3ee;
+    --acc-dim: rgba(34,211,238,0.12);
+    --grn:     #4ade80;
+    --grn-dim: rgba(74,222,128,0.1);
+    --red:     #f87171;
+    --red-dim: rgba(248,113,113,0.1);
+    --warn:    #fbbf24;
+    --text:    #e2e8f0;
+    --dim:     #475569;
+    --muted:   #1e293b;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
     background: var(--bg);
-    color: var(--fg);
-    font-family: 'Barlow', sans-serif;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
     min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
     overflow-x: hidden;
   }
 
-  /* ── TOP BAR ── */
+  /* ── HEADER ── */
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--dim);
+    padding: 18px 20px 14px;
   }
 
   .logo {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
+    font-size: 0.85rem;
     color: var(--acc);
-    letter-spacing: 0.15em;
+    letter-spacing: 0.22em;
   }
 
-  .status-row {
+  .header-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
 
-  .status-dot {
+  .ble-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
     background: var(--red);
-    transition: background 0.3s;
+    flex-shrink: 0;
+    transition: background 0.4s, box-shadow 0.4s;
   }
-  .status-dot.on { background: var(--grn); box-shadow: 0 0 8px var(--grn); }
-
-  .status-text {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--dimtx);
+  .ble-dot.on {
+    background: var(--grn);
+    box-shadow: 0 0 10px var(--grn);
   }
 
   #btn-connect {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    background: var(--acc);
-    color: var(--bg);
-    border: none;
-    padding: 7px 16px;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    background: transparent;
+    color: var(--acc);
+    border: 1px solid rgba(34,211,238,0.4);
+    padding: 6px 14px;
+    border-radius: 3px;
     cursor: pointer;
-    font-weight: 700;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  #btn-connect:hover { background: var(--acc-dim); }
+  #btn-connect.is-connected {
+    color: var(--red);
+    border-color: rgba(248,113,113,0.4);
+  }
+  #btn-connect.is-connected:hover { background: var(--red-dim); }
+
+  /* ── SPEEDOMETER ── */
+  .speedo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 20px 0;
+  }
+
+  .speedo-wrap {
+    position: relative;
+    width: 270px;
+    height: 270px;
+  }
+
+  .speedo-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .speedo-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .speed-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 5.2rem;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -3px;
+    transition: color 0.4s;
+  }
+
+  .speed-unit {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--dim);
+    letter-spacing: 0.25em;
+    margin-top: 6px;
+  }
+
+  /* ── BATTERY ── */
+  .bat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px 4px;
+  }
+
+  .bat-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    width: 38px;
+  }
+
+  .bat-track {
+    flex: 1;
+    height: 5px;
+    background: var(--muted);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bat-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--grn);
+    border-radius: 3px;
+    transition: width 0.6s ease, background 0.4s;
+  }
+
+  .bat-pct {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text);
+    width: 38px;
+    text-align: right;
+  }
+
+  /* ── STATUS ROW (Mode + KM + Icons) ── */
+  .status-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px 10px;
+  }
+
+  .mode-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .mode-pill:active { transform: scale(0.96); }
+
+  .mode-pill-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--dim);
+    letter-spacing: 0.12em;
+  }
+
+  .mode-pill-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+
+  .km-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    flex-shrink: 0;
+  }
+
+  .km-pill-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--dim);
+    letter-spacing: 0.12em;
+  }
+
+  .km-pill-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  /* ── GEAR COLOR CLASSES ── */
+  .gear-walk   { color: var(--dim); }
+  .gear-eco    { color: var(--grn); }
+  .gear-normal { color: var(--acc); }
+  .gear-sport  { color: #fb923c; }
+
+  /* ── ICON ROW ── */
+  .icon-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 0 20px 12px;
+    gap: 8px;
+  }
+
+  .ic-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 6px 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  }
+  .ic-btn:active { transform: scale(0.94); }
+
+  .ic-btn.is-on {
+    border-color: rgba(34,211,238,0.5);
+    background: var(--acc-dim);
+  }
+  .ic-btn.is-locked {
+    border-color: rgba(248,113,113,0.5);
+    background: var(--red-dim);
+  }
+  .ic-btn.is-open {
+    border-color: rgba(74,222,128,0.5);
+    background: var(--grn-dim);
+  }
+
+  .ic-btn svg {
+    width: 20px; height: 20px;
+    opacity: 0.35;
     transition: opacity 0.2s;
+    flex-shrink: 0;
   }
-  #btn-connect:disabled { opacity: 0.4; cursor: default; }
+  .ic-btn.is-on svg, .ic-btn.is-locked svg, .ic-btn.is-open svg { opacity: 1; }
 
-  /* ── MAIN LAYOUT ── */
-  .main {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 0;
-    height: calc(100vh - 57px);
-  }
-
-  @media (max-width: 700px) {
-    .main { grid-template-columns: 1fr; height: auto; }
-    .right-panel { height: 340px; }
+  .ic-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
   }
 
-  /* ── LEFT ── */
-  .left-panel {
-    padding: 16px;
-    overflow-y: auto;
+  .ic-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--dim);
+    transition: color 0.2s;
+  }
+  .ic-btn.is-on     .ic-val { color: var(--acc); }
+  .ic-btn.is-locked .ic-val { color: var(--red); }
+  .ic-btn.is-open   .ic-val { color: var(--grn); }
+
+  /* ── ACCORDION ── */
+  .accordion {
+    margin: 0 20px 10px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .acc-head {
+    background: var(--card);
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .acc-head:hover { background: var(--card2); }
+
+  .acc-head-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--dim);
+    letter-spacing: 0.18em;
+  }
+
+  .acc-arrow {
+    font-size: 0.7rem;
+    color: var(--dim);
+    transition: transform 0.25s;
+    display: inline-block;
+  }
+  .acc-arrow.open { transform: rotate(180deg); }
+
+  .acc-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+  }
+  .acc-body.open { max-height: 700px; }
+
+  .acc-inner {
+    background: var(--card2);
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
 
-  /* Stats */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
-  @media (max-width: 700px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  .stat-card {
-    background: var(--card);
-    padding: 12px 14px;
-    position: relative;
-    overflow: hidden;
-  }
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 2px; height: 100%;
-    background: var(--acc);
-    opacity: 0.4;
-  }
-  .stat-label {
+  .s-lbl {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.6rem;
-    color: var(--dimtx);
-    letter-spacing: 0.12em;
-    margin-bottom: 4px;
-  }
-  .stat-value {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.8rem;
-    color: var(--acc);
-    line-height: 1;
-  }
-  .stat-unit {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--dimtx);
-    margin-top: 2px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
   }
 
-  /* Pills */
-  .pills {
+  .seg {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .pill {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    padding: 4px 10px;
-    background: var(--card);
-    color: var(--dimtx);
-    letter-spacing: 0.08em;
-    transition: color 0.2s;
-  }
-  .pill.on  { color: var(--acc); }
-  .pill.red { color: var(--red); }
-  .pill.grn { color: var(--grn); }
-
-  /* Command groups */
-  .cmd-groups {
-    display: flex;
-    flex-direction: column;
     gap: 4px;
   }
 
-  .cmd-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .cmd-label {
+  .seg-btn {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--dimtx);
-    width: 80px;
-    flex-shrink: 0;
-    letter-spacing: 0.06em;
-  }
-
-  .cmd-btns { display: flex; gap: 4px; flex-wrap: wrap; }
-
-  .cmd-btn {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    padding: 5px 10px;
+    font-size: 0.62rem;
+    padding: 5px 13px;
     background: var(--card);
-    color: var(--fg);
-    border: none;
+    color: var(--dim);
+    border: 1px solid var(--border);
+    border-radius: 5px;
     cursor: pointer;
     letter-spacing: 0.05em;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
-  .cmd-btn:hover  { background: var(--acc); color: var(--bg); }
-  .cmd-btn:active { background: var(--acc); color: var(--bg); opacity: 0.7; }
-  .cmd-btn:disabled { opacity: 0.3; cursor: default; }
+  .seg-btn:hover { background: var(--acc); color: var(--bg); border-color: var(--acc); }
 
-  /* Custom hex */
   .custom-row {
     display: flex;
-    gap: 6px;
-    align-items: center;
+    gap: 8px;
   }
-  .custom-row .cmd-label { width: 80px; }
 
   #custom-input {
+    flex: 1;
+    min-width: 0;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     background: var(--card);
     color: var(--acc);
-    border: none;
-    padding: 5px 10px;
-    width: 180px;
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    border-radius: 5px;
     outline: none;
     letter-spacing: 0.08em;
+    transition: border-color 0.2s;
   }
+  #custom-input:focus { border-color: var(--acc); }
 
-  /* ── RIGHT PANEL ── */
-  .right-panel {
-    border-left: 1px solid var(--dim);
+  .chips {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .tab-bar {
-    display: flex;
-    border-bottom: 1px solid var(--dim);
-  }
-
-  .tab-btn {
+  .chip {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    padding: 10px 16px;
-    background: none;
-    border: none;
-    color: var(--dimtx);
-    cursor: pointer;
-    letter-spacing: 0.1em;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s;
-  }
-  .tab-btn.active {
-    color: var(--acc);
-    border-bottom-color: var(--acc);
+    font-size: 0.58rem;
+    color: var(--dim);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
   }
 
-  .tab-content { display: none; flex: 1; overflow: hidden; }
-  .tab-content.active { display: flex; flex-direction: column; }
-
-  /* Log */
-  #log {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    line-height: 1.7;
-  }
-
-  .log-tx  { color: var(--acc); }
-  .log-rx  { color: #333; }
-  .log-sys { color: var(--grn); }
-  .log-err { color: var(--red); }
-
-  /* RX Table */
-  #rx-table-wrap {
-    flex: 1;
-    overflow-y: auto;
-  }
-
-  table {
+  /* ── RX TABLE ── */
+  #rx-table {
     width: 100%;
     border-collapse: collapse;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.6rem;
   }
-
-  thead th {
+  #rx-table thead th {
     text-align: left;
-    padding: 8px 8px;
+    padding: 8px 10px;
     color: var(--acc);
     font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    border-bottom: 1px solid var(--dim);
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid var(--border);
+    background: var(--card2);
     position: sticky;
     top: 0;
-    background: var(--bg);
+  }
+  #rx-table tbody td {
+    padding: 5px 10px;
+    color: var(--text);
+    border-bottom: 1px solid #0e0e1a;
+  }
+  #rx-table tbody tr.flash td { background: #0a1a12; }
+  .td-cmd { color: var(--dim); }
+  .td-val { color: var(--acc); }
+
+  /* ── LOG ── */
+  #log {
+    padding: 10px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    line-height: 1.8;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .log-tx  { color: var(--acc); }
+  .log-rx  { color: #252540; }
+  .log-sys { color: var(--grn); }
+  .log-err { color: var(--red); }
+
+  /* ── DISABLED STATE ── */
+  body:not([data-connected]) .needs-conn {
+    opacity: 0.35;
+    pointer-events: none;
   }
 
-  tbody td {
-    padding: 5px 8px;
-    color: var(--fg);
-    border-bottom: 1px solid #1a1a1a;
-    transition: background 0.1s;
-  }
+  .bottom-spacer { height: 36px; }
 
-  tbody tr.flash td { background: #0A2A1A; }
-
-  .td-cmd  { color: var(--dimtx); }
-  .td-val  { color: var(--acc); }
 </style>
 </head>
 <body>
 
 <header>
   <span class="logo">G2 MASTER</span>
-  <div class="status-row">
-    <div class="status-dot" id="dot"></div>
-    <span class="status-text" id="status-text">Getrennt</span>
-    <button id="btn-connect" onclick="connect()">VERBINDEN</button>
+  <div class="header-right">
+    <div class="ble-dot" id="dot"></div>
+    <button id="btn-connect" onclick="handleConnect()">VERBINDEN</button>
   </div>
 </header>
 
-<div class="main">
-  <!-- LEFT -->
-  <div class="left-panel">
+<!-- Speedometer -->
+<div class="speedo-section">
+  <div class="speedo-wrap">
+    <svg class="speedo-svg" viewBox="0 0 270 270">
+      <defs>
+        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#22d3ee" />
+          <stop offset="60%"  stop-color="#818cf8" />
+          <stop offset="100%" stop-color="#f472b6" />
+        </linearGradient>
+        <radialGradient id="innerGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#141428" />
+          <stop offset="100%" stop-color="#09090f" />
+        </radialGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
 
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">GESCHW.</div>
-        <div class="stat-value" id="s-speed">0</div>
-        <div class="stat-unit" id="s-unit">km/h</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">AKKU</div>
-        <div class="stat-value" id="s-battery">—</div>
-        <div class="stat-unit">%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">GANG</div>
-        <div class="stat-value" id="s-gear">—</div>
-        <div class="stat-unit">&nbsp;</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">SPANNUNG</div>
-        <div class="stat-value" id="s-voltage">—</div>
-        <div class="stat-unit">&nbsp;</div>
-      </div>
+      <!-- Inner glow background -->
+      <circle cx="135" cy="135" r="100" fill="url(#innerGrad)" />
+
+      <!-- Track arc -->
+      <circle cx="135" cy="135" r="106"
+        fill="none"
+        stroke="#1a1a30"
+        stroke-width="9"
+        stroke-dasharray="501 168"
+        stroke-linecap="round"
+        transform="rotate(135,135,135)" />
+
+      <!-- Tick marks (generated by JS) -->
+      <g id="ticks"></g>
+
+      <!-- Speed arc -->
+      <circle id="arc-speed" cx="135" cy="135" r="106"
+        fill="none"
+        stroke="url(#arcGrad)"
+        stroke-width="9"
+        stroke-dasharray="0 10000"
+        stroke-linecap="round"
+        transform="rotate(135,135,135)"
+        filter="url(#glow)" />
+    </svg>
+
+    <div class="speedo-center">
+      <div class="speed-num" id="s-speed">0</div>
+      <div class="speed-unit" id="s-unit">km/h</div>
     </div>
+  </div>
+</div>
 
-    <!-- Pills -->
-    <div class="pills">
-      <span class="pill" id="p-light">LICHT AUS</span>
-      <span class="pill grn" id="p-lock">OFFEN</span>
-      <span class="pill" id="p-cruise">CRUISE AUS</span>
-      <span class="pill" id="p-start">ZERO START</span>
-    </div>
+<!-- Battery -->
+<div class="bat-row">
+  <span class="bat-lbl">AKKU</span>
+  <div class="bat-track">
+    <div class="bat-fill" id="bat-fill"></div>
+  </div>
+  <span class="bat-pct" id="s-battery">—</span>
+</div>
 
-    <!-- Commands -->
-    <div class="cmd-groups">
+<!-- Mode + KM + Icons -->
+<div class="status-strip">
+  <div class="mode-pill needs-conn" onclick="cycleGear()">
+    <span class="mode-pill-lbl">MODUS</span>
+    <span class="mode-pill-val gear-normal" id="s-gear">—</span>
+  </div>
+  <div class="km-pill">
+    <span class="km-pill-lbl">KM</span>
+    <span class="km-pill-val" id="p-km">—</span>
+  </div>
+</div>
 
-      <div class="cmd-row">
-        <span class="cmd-label">GANG</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF551F0100')">0</button>
-          <button class="cmd-btn" onclick="send('FF551F0101')">1</button>
-          <button class="cmd-btn" onclick="send('FF551F0102')">2</button>
-          <button class="cmd-btn" onclick="send('FF551F0103')">3</button>
-        </div>
-      </div>
+<div class="icon-row needs-conn">
 
-      <div class="cmd-row">
-        <span class="cmd-label">SCHLOSS</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF55170102')">Sperren</button>
-          <button class="cmd-btn" onclick="send('FF55170101')">Öffnen</button>
-        </div>
-      </div>
-
-      <div class="cmd-row">
-        <span class="cmd-label">LICHT</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF55240101')">AN</button>
-          <button class="cmd-btn" onclick="send('FF55240100')">AUS</button>
-        </div>
-      </div>
-
-      <div class="cmd-row">
-        <span class="cmd-label">EINHEIT</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF55180101')">km/h</button>
-          <button class="cmd-btn" onclick="send('FF55180102')">mph</button>
-        </div>
-      </div>
-
-      <div class="cmd-row">
-        <span class="cmd-label">START</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF551A0101')">Zero Start</button>
-          <button class="cmd-btn" onclick="send('FF551A0102')">Kick Start</button>
-        </div>
-      </div>
-
-      <div class="cmd-row">
-        <span class="cmd-label">CRUISE CTRL</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF551D0101')">AN</button>
-          <button class="cmd-btn" onclick="send('FF551D0102')">AUS</button>
-        </div>
-      </div>
-
-      <div class="cmd-row">
-        <span class="cmd-label">INFO</span>
-        <div class="cmd-btns">
-          <button class="cmd-btn" onclick="send('FF552600')">HW Version</button>
-          <button class="cmd-btn" onclick="send('FF551E0200')">Self Test</button>
-        </div>
-      </div>
-
-      <div class="cmd-row custom-row">
-        <span class="cmd-label">CUSTOM</span>
-        <input id="custom-input" placeholder="FF55..." maxlength="40">
-        <button class="cmd-btn" onclick="sendCustom()">SEND</button>
-      </div>
-
-    </div>
-
-    <!-- Serial / FW -->
-    <div class="pills" style="margin-top:4px">
-      <span class="pill" id="p-serial">S/N: —</span>
-      <span class="pill" id="p-fw">FW: —</span>
-      <span class="pill" id="p-km">KM: —</span>
-    </div>
-
+  <div class="ic-btn" id="card-light" onclick="toggleLight()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+    </svg>
+    <span class="ic-lbl">LICHT</span>
+    <span class="ic-val" id="t-light">AUS</span>
   </div>
 
-  <!-- RIGHT -->
-  <div class="right-panel">
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('log', this)">LOG</button>
-      <button class="tab-btn" onclick="switchTab('rx', this)">RX LIVE</button>
-    </div>
+  <div class="ic-btn" id="card-lock" onclick="toggleLock()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="1.5">
+      <rect x="5" y="11" width="14" height="10" rx="2"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>
+    <span class="ic-lbl">SCHLOSS</span>
+    <span class="ic-val" id="t-lock">OFFEN</span>
+  </div>
 
-    <div class="tab-content active" id="tab-log">
-      <div id="log"></div>
-    </div>
+  <div class="ic-btn" id="card-cruise" onclick="toggleCruise()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
+      <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="2"/>
+    </svg>
+    <span class="ic-lbl">CRUISE</span>
+    <span class="ic-val" id="t-cruise">AUS</span>
+  </div>
 
-    <div class="tab-content" id="tab-rx">
-      <div id="rx-table-wrap">
-        <table>
+  <div class="ic-btn" id="card-start" onclick="toggleStart()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.5">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+    <span class="ic-lbl">START</span>
+    <span class="ic-val" id="t-start">ZERO</span>
+  </div>
+
+</div>
+
+<!-- Settings Accordion -->
+<div class="accordion">
+  <div class="acc-head" onclick="toggleAcc('acc-settings', this)">
+    <span class="acc-head-lbl">EINSTELLUNGEN</span>
+    <span class="acc-arrow">&#9660;</span>
+  </div>
+  <div class="acc-body" id="acc-settings">
+    <div class="acc-inner">
+
+      <div class="setting-row">
+        <span class="s-lbl">EINHEIT</span>
+        <div class="seg">
+          <button class="seg-btn needs-conn" onclick="send('FF55180101')">km/h</button>
+          <button class="seg-btn needs-conn" onclick="send('FF55180102')">mph</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="s-lbl">GANG DIREKT</span>
+        <div class="seg">
+          <button class="seg-btn needs-conn" onclick="setGear(0)">0</button>
+          <button class="seg-btn needs-conn" onclick="setGear(1)">1</button>
+          <button class="seg-btn needs-conn" onclick="setGear(2)">2</button>
+          <button class="seg-btn needs-conn" onclick="setGear(3)">3</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="s-lbl">INFO</span>
+        <div class="seg">
+          <button class="seg-btn needs-conn" onclick="send('FF552600')">HW Version</button>
+          <button class="seg-btn needs-conn" onclick="send('FF551E0200')">Self Test</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="s-lbl" style="margin-bottom:8px">CUSTOM HEX</div>
+        <div class="custom-row">
+          <input id="custom-input" placeholder="FF55..." maxlength="40">
+          <button class="seg-btn needs-conn" onclick="sendCustom()">SENDEN</button>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip" id="p-serial">S/N: —</span>
+        <span class="chip" id="p-fw">FW: —</span>
+        <span class="chip" id="p-voltage">Spannung: —</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- RX Table Accordion -->
+<div class="accordion">
+  <div class="acc-head" onclick="toggleAcc('acc-rx', this)">
+    <span class="acc-head-lbl">RX LIVE</span>
+    <span class="acc-arrow">&#9660;</span>
+  </div>
+  <div class="acc-body" id="acc-rx">
+    <div class="acc-inner" style="padding:0">
+      <div style="overflow-x:auto">
+        <table id="rx-table">
           <thead>
             <tr>
               <th>CMD</th>
@@ -463,20 +680,46 @@
   </div>
 </div>
 
+<!-- Log Accordion -->
+<div class="accordion">
+  <div class="acc-head" onclick="toggleAcc('acc-log', this)">
+    <span class="acc-head-lbl">LOG</span>
+    <span class="acc-arrow">&#9660;</span>
+  </div>
+  <div class="acc-body" id="acc-log">
+    <div id="log"></div>
+  </div>
+</div>
+
+<div class="bottom-spacer"></div>
+
 <script>
-// ── BLE ─────────────────────────────────────────
+// ── BLE ──────────────────────────────────────────
+const SVC_UUID   = '00007777-0000-1000-8000-00805f9b34fb';
 const READ_UUID  = '00008888-0000-1000-8000-00805f9b34fb';
 const WRITE_UUID = '00008877-0000-1000-8000-00805f9b34fb';
 
-let device, server, service, writeChar, readChar;
+let device, writeChar, readChar;
 let keepaliveTimer = null;
 let connected = false;
 
+// Scooter state
+let currentGear  = 0;
+let lightOn      = false;
+let locked       = false;
+let cruiseOn     = false;
+let kickStart    = false;
+
+const MAX_SPEED  = 35;
+const GEAR_NAMES = ['0', '1', '2', '3'];
+const GEAR_CLASS = ['gear-walk', 'gear-eco', 'gear-normal', 'gear-sport'];
+
+// ── Protocol ────────────────────────────────────
 function checksum(hex) {
-  let total = 0;
+  let sum = 0;
   for (let i = 0; i < hex.length; i += 2)
-    total += parseInt(hex.substr(i, 2), 16);
-  return (total % 256).toString(16).padStart(2, '0').toUpperCase();
+    sum += parseInt(hex.substr(i, 2), 16);
+  return (sum % 256).toString(16).padStart(2, '0').toUpperCase();
 }
 
 function makeCmd(hex) {
@@ -488,15 +731,24 @@ function makeCmd(hex) {
   return new Uint8Array(bytes);
 }
 
-async function connect() {
+// ── Connect / Disconnect ─────────────────────────
+function handleConnect() {
+  connected ? disconnect() : connectBLE();
+}
+
+async function connectBLE() {
   try {
     device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: 'Scooter' }, { namePrefix: 'KuKirin' }, { namePrefix: 'Kugoo' }],
-      optionalServices: ['00007777-0000-1000-8000-00805f9b34fb']
+      filters: [
+        { name: 'Scooter' },
+        { namePrefix: 'KuKirin' },
+        { namePrefix: 'Kugoo' }
+      ],
+      optionalServices: [SVC_UUID]
     });
-    log('Verbinde...', 'sys');
-    server  = await device.gatt.connect();
-    service = await server.getPrimaryService('00007777-0000-1000-8000-00805f9b34fb');
+    log('Verbinde mit ' + device.name + '...', 'sys');
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService(SVC_UUID);
     writeChar = await service.getCharacteristic(WRITE_UUID);
     readChar  = await service.getCharacteristic(READ_UUID);
     await readChar.startNotifications();
@@ -504,14 +756,11 @@ async function connect() {
     device.addEventListener('gattserverdisconnected', onDisconnect);
 
     connected = true;
-    setConnected(true);
+    setConnectedUI(true);
+
+    await writeChar.writeValueWithoutResponse(makeCmd('FF550100'));
     log('Verbunden!', 'sys');
 
-    // Handshake
-    await writeChar.writeValueWithoutResponse(makeCmd('FF550100'));
-    log('>> FF 55 01 00 55 (HANDSHAKE)', 'tx');
-
-    // Keepalive alle 3s
     keepaliveTimer = setInterval(async () => {
       if (connected) {
         try { await writeChar.writeValueWithoutResponse(makeCmd('FF550100')); }
@@ -524,18 +773,24 @@ async function connect() {
   }
 }
 
+function disconnect() {
+  if (device && device.gatt.connected) device.gatt.disconnect();
+  onDisconnect();
+}
+
 function onDisconnect() {
   connected = false;
   if (keepaliveTimer) clearInterval(keepaliveTimer);
-  setConnected(false);
+  setConnectedUI(false);
   log('Verbindung getrennt.', 'err');
 }
 
+// ── Send ─────────────────────────────────────────
 async function send(hex) {
   if (!connected || !writeChar) { log('Nicht verbunden!', 'err'); return; }
   const cmd = makeCmd(hex);
-  const hexStr = Array.from(cmd).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-  log('>> ' + hexStr, 'tx');
+  const str = Array.from(cmd).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+  log('>> ' + str, 'tx');
   await writeChar.writeValueWithoutResponse(cmd);
 }
 
@@ -544,170 +799,221 @@ async function sendCustom() {
   if (val) await send(val);
 }
 
-// ── RX ──────────────────────────────────────────
-const SILENT = new Set([0x01,0x02,0x03,0x04,0x06,0x0A,0x0B,0x0C,0x0D,
-                        0x10,0x11,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,
-                        0x1F,0x22,0x24]);
+// ── Toggles ──────────────────────────────────────
+function cycleGear() {
+  if (!connected) return;
+  currentGear = (currentGear + 1) % 4;
+  setGear(currentGear);
+}
 
+function setGear(g) {
+  currentGear = g;
+  const hex = g.toString(16).padStart(2, '0').toUpperCase();
+  send('FF551F01' + hex);
+  const el = document.getElementById('s-gear');
+  el.textContent = String(g);
+  el.className = 'mode-pill-val ' + (GEAR_CLASS[g] ?? 'gear-normal');
+}
+
+function toggleLight()  { send(lightOn   ? 'FF55240100' : 'FF55240101'); }
+function toggleLock()   { send(locked    ? 'FF55170101' : 'FF55170102'); }
+function toggleCruise() { send(cruiseOn  ? 'FF551D0102' : 'FF551D0101'); }
+function toggleStart()  { send(kickStart ? 'FF551A0101' : 'FF551A0102'); }
+
+// ── RX Table ─────────────────────────────────────
 const CMD_NAMES = {
-  0x02:'Seriennummer', 0x03:'Firmware', 0x04:'Hardware',
-  0x06:'Unbekannt',    0x0A:'Geschwindigkeit', 0x0B:'Unbekannt',
-  0x0C:'Gesamtkm',     0x0D:'Akku %',    0x10:'Speedmodus',
-  0x11:'Unbekannt',    0x17:'Schloss',   0x18:'Einheit',
-  0x19:'Light Module', 0x1A:'Startmodus',0x1B:'Spannung',
-  0x1C:'Radgröße',     0x1D:'Cruise',    0x1F:'Gang',
-  0x22:'Uptime',       0x24:'Frontlicht'
+  0x02:'Seriennummer', 0x03:'Firmware',    0x04:'Hardware',
+  0x0A:'Geschwindigkeit', 0x0B:'Unbekannt', 0x0C:'Gesamtkm',
+  0x0D:'Akku %',       0x10:'Speedmodus', 0x11:'Unbekannt',
+  0x17:'Schloss',      0x18:'Einheit',    0x19:'Light Module',
+  0x1A:'Startmodus',   0x1B:'Spannung',   0x1C:'Radgröße',
+  0x1D:'Cruise',       0x1F:'Gang',       0x22:'Uptime',
+  0x24:'Frontlicht'
 };
+const rxRows = {};
 
-const rxRows = {}; // cmd -> tr element
+function updateRxTable(cmd, rawHex, updates) {
+  const name   = CMD_NAMES[cmd] ?? ('CMD ' + cmd.toString(16).toUpperCase().padStart(2,'0'));
+  const wert   = Object.values(updates).join(' ') || rawHex.split(' ').slice(3).join(' ');
+  const cmdHex = cmd.toString(16).toUpperCase().padStart(2,'0');
 
+  if (cmd in rxRows) {
+    const cells = rxRows[cmd].querySelectorAll('td');
+    const prev  = cells[3].textContent;
+    cells[2].textContent = rawHex;
+    cells[3].textContent = wert;
+    if (prev !== wert) {
+      rxRows[cmd].classList.add('flash');
+      setTimeout(() => rxRows[cmd].classList.remove('flash'), 400);
+    }
+  } else {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="td-cmd">${cmdHex}</td><td>${name}</td><td>${rawHex}</td><td class="td-val">${wert}</td>`;
+    document.getElementById('rx-tbody').appendChild(tr);
+    rxRows[cmd] = tr;
+  }
+}
+
+// ── RX ───────────────────────────────────────────
 function onRx(event) {
-  const data = new Uint8Array(event.target.value.buffer);
+  const data   = new Uint8Array(event.target.value.buffer);
   if (data.length < 3 || data[0] !== 0xFF || data[1] !== 0x55) return;
-
-  const cmd = data[2];
-  const payload = data.slice(3);
-  const rawHex = Array.from(data).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-
-  // Dekodieren
-  const updates = decode(cmd, payload);
+  const cmd    = data[2];
+  const rawHex = Array.from(data).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+  const updates = decode(cmd, data.slice(3));
   applyUpdates(updates);
   updateRxTable(cmd, rawHex, updates);
-
-  // Log nur für unbekannte CMDs
-  if (!SILENT.has(cmd)) {
-    log('<< ' + rawHex, 'rx');
-  }
 }
 
 function decode(cmd, p) {
   const u = {};
-  if (cmd === 0x0A && p.length >= 3) {
-    const raw = (p[1] << 8) | p[2];
-    u.speed = (raw / 1035).toFixed(1);
-  } else if (cmd === 0x0D && p.length >= 2) {
-    u.battery = p[1];
-  } else if (cmd === 0x17 && p.length >= 2) {
-    u.locked = p[1] === 2;
-  } else if (cmd === 0x24 && p.length >= 2) {
-    u.light = p[1] === 1;
-  } else if (cmd === 0x1F && p.length >= 2) {
-    u.gear = {0:'0',1:'1',2:'2',3:'3'}[p[1]] ?? '?';
-  } else if (cmd === 0x18 && p.length >= 2) {
-    u.unit = p[1] === 1 ? 'km/h' : 'mph';
-  } else if (cmd === 0x1B && p.length >= 2) {
-    u.voltage = {1:'24V',2:'36V',3:'48V',4:'60V'}[p[1]] ?? '?V';
-  } else if (cmd === 0x02 && p.length >= 9) {
-    u.serial = String.fromCharCode(...p.slice(1,9));
-  } else if (cmd === 0x03 && p.length >= 9) {
-    u.firmware = String.fromCharCode(...p.slice(1,9));
-  } else if (cmd === 0x0C && p.length >= 5) {
-    const km = ((p[1]<<24)|(p[2]<<16)|(p[3]<<8)|p[4]);
-    u.km = (km / 1000).toFixed(0);
-  } else if (cmd === 0x1D && p.length >= 2) {
-    u.cruise = p[1] === 1;
-  } else if (cmd === 0x1A && p.length >= 2) {
-    u.startmode = p[1] === 1 ? 'ZERO START' : 'KICK START';
+  switch (cmd) {
+    case 0x0A: if (p.length >= 3) u.speed = parseFloat(((p[1]<<8|p[2])/1035).toFixed(1)); break;
+    case 0x0D: if (p.length >= 2) u.battery = p[1]; break;
+    case 0x17: if (p.length >= 2) u.locked = p[1] === 2; break;
+    case 0x24: if (p.length >= 2) u.light = p[1] === 1; break;
+    case 0x1F: if (p.length >= 2) u.gear = p[1] - 1; break;
+    case 0x18: if (p.length >= 2) u.unit = p[1] === 1 ? 'km/h' : 'mph'; break;
+    case 0x1B: if (p.length >= 2) u.voltage = ({1:'24V',2:'36V',3:'48V',4:'60V'}[p[1]] ?? '?'); break;
+    case 0x02: if (p.length >= 9) u.serial = String.fromCharCode(...p.slice(1,9)); break;
+    case 0x03: if (p.length >= 9) u.firmware = String.fromCharCode(...p.slice(1,9)); break;
+    case 0x0C: if (p.length >= 5) u.km = ((p[1]<<24|p[2]<<16|p[3]<<8|p[4])/1000).toFixed(0); break;
+    case 0x1D: if (p.length >= 2) u.cruise = p[1] === 1; break;
+    case 0x1A: if (p.length >= 2) u.kickStart = p[1] === 2; break;
   }
   return u;
 }
 
 function applyUpdates(u) {
-  if ('speed'    in u) setText('s-speed', u.speed);
-  if ('battery'  in u) setText('s-battery', u.battery);
-  if ('gear'     in u) setText('s-gear', u.gear);
-  if ('voltage'  in u) setText('s-voltage', u.voltage);
-  if ('unit'     in u) { setText('s-unit', u.unit); setPill('p-unit', u.unit, false); }
-  if ('serial'   in u) setText('p-serial', 'S/N: ' + u.serial);
-  if ('firmware' in u) setText('p-fw', 'FW: ' + u.firmware);
-  if ('km'       in u) setText('p-km', 'KM: ' + u.km);
-  if ('light'    in u) {
-    const p = document.getElementById('p-light');
-    p.textContent = u.light ? 'LICHT AN' : 'LICHT AUS';
-    p.className = 'pill' + (u.light ? ' on' : '');
+  if ('speed' in u) {
+    setText('s-speed', u.speed);
+    updateSpeedo(u.speed);
   }
-  if ('locked'   in u) {
-    const p = document.getElementById('p-lock');
-    p.textContent = u.locked ? 'GESPERRT' : 'OFFEN';
-    p.className = 'pill' + (u.locked ? ' red' : ' grn');
+  if ('battery' in u) {
+    setText('s-battery', u.battery + '%');
+    const fill = document.getElementById('bat-fill');
+    fill.style.width = u.battery + '%';
+    fill.style.background = u.battery <= 20 ? 'var(--red)' : u.battery <= 40 ? 'var(--warn)' : 'var(--grn)';
   }
-  if ('cruise'   in u) {
-    const p = document.getElementById('p-cruise');
-    p.textContent = u.cruise ? 'CRUISE AN' : 'CRUISE AUS';
-    p.className = 'pill' + (u.cruise ? ' on' : '');
+  if ('gear' in u && u.gear >= 0 && u.gear <= 3) {
+    currentGear = u.gear;
+    const el = document.getElementById('s-gear');
+    el.textContent = String(u.gear);
+    el.className = 'mode-pill-val ' + GEAR_CLASS[u.gear];
   }
-  if ('startmode' in u) {
-    setText('p-start', u.startmode);
+  if ('unit'    in u) setText('s-unit', u.unit);
+  if ('serial'  in u) setText('p-serial', 'S/N: ' + u.serial);
+  if ('firmware'in u) setText('p-fw', 'FW: ' + u.firmware);
+  if ('voltage' in u) setText('p-voltage', 'Spannung: ' + u.voltage);
+  if ('km'      in u) setText('p-km', u.km + ' km');
+  if ('light'   in u) {
+    lightOn = u.light;
+    setToggleCard('card-light', 't-light', u.light ? 'is-on' : '', u.light ? 'AN' : 'AUS');
   }
-}
-
-function updateRxTable(cmd, rawHex, updates) {
-  const name = CMD_NAMES[cmd] ?? `CMD ${cmd.toString(16).toUpperCase().padStart(2,'0')}`;
-  let wert = Object.values(updates).join(' ') || rawHex.split(' ').slice(4).join(' ');
-  const cmdHex = cmd.toString(16).toUpperCase().padStart(2,'0');
-
-  if (cmd in rxRows) {
-    const tr = rxRows[cmd];
-    const cells = tr.querySelectorAll('td');
-    const oldWert = cells[3].textContent;
-    cells[2].textContent = rawHex;
-    cells[3].textContent = wert;
-    if (oldWert !== wert) flashRow(tr);
-  } else {
-    const tbody = document.getElementById('rx-tbody');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="td-cmd">${cmdHex}</td><td>${name}</td><td>${rawHex}</td><td class="td-val">${wert}</td>`;
-    tbody.appendChild(tr);
-    rxRows[cmd] = tr;
+  if ('locked' in u) {
+    locked = u.locked;
+    setToggleCard('card-lock', 't-lock', u.locked ? 'is-locked' : 'is-open', u.locked ? 'GESPERRT' : 'OFFEN');
+  }
+  if ('cruise' in u) {
+    cruiseOn = u.cruise;
+    setToggleCard('card-cruise', 't-cruise', u.cruise ? 'is-on' : '', u.cruise ? 'AN' : 'AUS');
+  }
+  if ('kickStart' in u) {
+    kickStart = u.kickStart;
+    setToggleCard('card-start', 't-start', u.kickStart ? 'is-on' : '', u.kickStart ? 'KICK' : 'ZERO');
   }
 }
 
-function flashRow(tr) {
-  tr.classList.add('flash');
-  setTimeout(() => tr.classList.remove('flash'), 400);
+// ── Speedometer ──────────────────────────────────
+function updateSpeedo(speed) {
+  const C      = 2 * Math.PI * 106;
+  const arcLen = C * 0.75;
+  const fill   = Math.min(speed / MAX_SPEED, 1) * arcLen;
+  document.getElementById('arc-speed').setAttribute('stroke-dasharray', fill + ' 10000');
+
+  // Color shift: cyan → orange → red based on speed
+  const num = document.getElementById('s-speed');
+  if (speed > 30)      num.style.color = 'var(--red)';
+  else if (speed > 20) num.style.color = 'var(--warn)';
+  else                 num.style.color = '#ffffff';
 }
 
-// ── UI helpers ───────────────────────────────────
+function drawTicks() {
+  const g = document.getElementById('ticks');
+  const cx = 135, cy = 135, r = 106;
+  for (let s = 0; s <= MAX_SPEED; s += 5) {
+    const isMajor = s % 10 === 0;
+    const θ = (135 + (s / MAX_SPEED) * 270) * Math.PI / 180;
+    const ro = r - 1;
+    const ri = ro - (isMajor ? 12 : 7);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx + ri * Math.cos(θ));
+    line.setAttribute('y1', cy + ri * Math.sin(θ));
+    line.setAttribute('x2', cx + ro * Math.cos(θ));
+    line.setAttribute('y2', cy + ro * Math.sin(θ));
+    line.setAttribute('stroke', isMajor ? '#2a2a42' : '#1c1c30');
+    line.setAttribute('stroke-width', isMajor ? '2' : '1');
+    g.appendChild(line);
+
+    if (isMajor) {
+      const rt = ro - 22;
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', cx + rt * Math.cos(θ));
+      text.setAttribute('y', cy + rt * Math.sin(θ));
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('fill', '#252540');
+      text.setAttribute('font-size', '8');
+      text.setAttribute('font-family', 'Share Tech Mono, monospace');
+      text.textContent = s;
+      g.appendChild(text);
+    }
+  }
+}
+
+// ── UI Helpers ───────────────────────────────────
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
 }
 
-function setPill(id, text, active) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = text;
-  el.className = 'pill' + (active ? ' on' : '');
+function setToggleCard(cardId, stateId, activeClass, stateText) {
+  const card = document.getElementById(cardId);
+  card.className = 'ic-btn' + (activeClass ? ' ' + activeClass : '');
+  setText(stateId, stateText);
 }
 
-function setConnected(on) {
-  document.getElementById('dot').className = 'status-dot' + (on ? ' on' : '');
-  document.getElementById('status-text').textContent = on ? 'Verbunden' : 'Getrennt';
-  document.getElementById('btn-connect').disabled = on;
-  document.getElementById('btn-connect').textContent = on ? 'VERBUNDEN' : 'VERBINDEN';
-  document.querySelectorAll('.cmd-btn').forEach(b => b.disabled = !on);
+function setConnectedUI(on) {
+  document.getElementById('dot').className = 'ble-dot' + (on ? ' on' : '');
+  const btn = document.getElementById('btn-connect');
+  btn.className = on ? 'is-connected' : '';
+  btn.textContent = on ? 'TRENNEN' : 'VERBINDEN';
+  if (on) document.body.setAttribute('data-connected', '');
+  else    document.body.removeAttribute('data-connected');
 }
 
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
+function toggleAcc(bodyId, headEl) {
+  const body  = document.getElementById(bodyId);
+  const arrow = headEl.querySelector('.acc-arrow');
+  const open  = body.classList.toggle('open');
+  arrow.classList.toggle('open', open);
 }
 
-function log(msg, cls='sys') {
-  const el = document.getElementById('log');
+function log(msg, cls = 'sys') {
+  const el   = document.getElementById('log');
   const line = document.createElement('div');
-  line.className = 'log-' + cls;
+  line.className   = 'log-' + cls;
   line.textContent = msg;
   el.appendChild(line);
   el.scrollTop = el.scrollHeight;
 }
 
-// Buttons beim Start deaktivieren
-setConnected(false);
 
-// Enter auf Custom-Input
+// ── Init ─────────────────────────────────────────
+setConnectedUI(false);
+drawTicks();
+updateSpeedo(0);
+
 document.getElementById('custom-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendCustom();
 });
