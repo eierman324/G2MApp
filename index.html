@@ -241,6 +241,13 @@
     line-height: 1;
   }
 
+  .km-avg {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--dim);
+    margin-top: 3px;
+  }
+
   /* ── GEAR COLOR CLASSES ── */
   .gear-walk   { color: var(--dim); }
   .gear-eco    { color: var(--grn); }
@@ -336,6 +343,26 @@
     margin-left: 6px;
   }
   .mode-pill.locked .mode-pill-val { color: var(--warn) !important; }
+
+  /* ── BLINK MODE ── */
+  @keyframes blink-glow {
+    0%   { border-color: var(--acc); box-shadow: 0 0 12px rgba(34,211,238,0.5); }
+    50%  { border-color: rgba(34,211,238,0.2); box-shadow: none; }
+    100% { border-color: var(--acc); box-shadow: 0 0 12px rgba(34,211,238,0.5); }
+  }
+  .blinking {
+    animation: blink-glow 0.5s ease-in-out infinite;
+    position: relative;
+  }
+  .blinking::after {
+    content: 'BLINK';
+    position: absolute;
+    top: 4px; right: 5px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.42rem;
+    color: var(--acc);
+    letter-spacing: 0.08em;
+  }
 
   /* ── ACCORDION ── */
   .accordion {
@@ -589,6 +616,7 @@
   <div class="km-pill">
     <span class="km-pill-lbl">KM</span>
     <span class="km-pill-val" id="p-km">—</span>
+    <span class="km-avg" id="p-avg">— km/h ⌀</span>
   </div>
 </div>
 
@@ -732,6 +760,9 @@ let connected = false;
 
 // Scooter state
 let currentGear  = 0;
+let lastMeters     = null;
+let lastMetersTime = null;
+const metersBuf = []; // {m, t} letzte 5 Datenpunkte
 let lightOn      = false;
 let locked       = false;
 let cruiseOn     = false;
@@ -808,6 +839,9 @@ function disconnect() {
 function onDisconnect() {
   connected = false;
   if (keepaliveTimer) clearInterval(keepaliveTimer);
+  lastMeters     = null;
+  lastMetersTime = null;
+  metersBuf.length = 0;
   setConnectedUI(false);
   log('Verbindung getrennt.', 'err');
 }
@@ -836,31 +870,47 @@ function cycleGear() {
 function setGear(g) {
   currentGear = g;
   const hex = g.toString(16).padStart(2, '0').toUpperCase();
-  send('FF551F01' + hex);
+  const cmd = 'FF551F01' + hex;
+  send(cmd);
   const el = document.getElementById('s-gear');
   el.textContent = String(g);
   el.className = 'mode-pill-val ' + (GEAR_CLASS[g] ?? 'gear-normal');
+  restartLock('mode-pill', cmd);
+}
+
+function restartLock(id, cmd) {
+  if (!lockIntervals[id]) return;
+  clearInterval(lockIntervals[id]);
+  lockIntervals[id] = setInterval(() => send(cmd), 50);
 }
 
 function toggleLight() {
   lightOn = !lightOn;
-  send(lightOn ? 'FF55240101' : 'FF55240100');
+  const cmd = lightOn ? 'FF55240101' : 'FF55240100';
+  send(cmd);
   setToggleCard('card-light', 't-light', lightOn ? 'is-on' : '', lightOn ? 'AN' : 'AUS');
+  restartLock('card-light', cmd);
 }
 function toggleLock() {
   locked = !locked;
-  send(locked ? 'FF55170102' : 'FF55170101');
+  const cmd = locked ? 'FF55170102' : 'FF55170101';
+  send(cmd);
   setToggleCard('card-lock', 't-lock', locked ? 'is-locked' : 'is-open', locked ? 'GESPERRT' : 'OFFEN');
+  restartLock('card-lock', cmd);
 }
 function toggleCruise() {
   cruiseOn = !cruiseOn;
-  send(cruiseOn ? 'FF551D0101' : 'FF551D0102');
+  const cmd = cruiseOn ? 'FF551D0101' : 'FF551D0102';
+  send(cmd);
   setToggleCard('card-cruise', 't-cruise', cruiseOn ? 'is-on' : '', cruiseOn ? 'AN' : 'AUS');
+  restartLock('card-cruise', cmd);
 }
 function toggleStart() {
   kickStart = !kickStart;
-  send(kickStart ? 'FF551A0102' : 'FF551A0101');
+  const cmd = kickStart ? 'FF551A0102' : 'FF551A0101';
+  send(cmd);
   setToggleCard('card-start', 't-start', kickStart ? 'is-on' : '', kickStart ? 'KICK' : 'ZERO');
+  restartLock('card-start', cmd);
 }
 
 // ── RX Table ─────────────────────────────────────
@@ -920,7 +970,7 @@ function decode(cmd, p) {
     case 0x1B: if (p.length >= 2) u.voltage = ({1:'24V',2:'36V',3:'48V',4:'60V'}[p[1]] ?? '?'); break;
     case 0x02: if (p.length >= 9) u.serial = String.fromCharCode(...p.slice(1,9)); break;
     case 0x03: if (p.length >= 9) u.firmware = String.fromCharCode(...p.slice(1,9)); break;
-    case 0x0C: if (p.length >= 5) u.km = ((p[1]<<24|p[2]<<16|p[3]<<8|p[4])/1000).toFixed(0); break;
+    case 0x0C: if (p.length >= 5) u.meters = (p[1]<<24|p[2]<<16|p[3]<<8|p[4]); break;
     case 0x1D: if (p.length >= 2) u.cruise = p[1] === 1; break;
     case 0x1A: if (p.length >= 2) u.kickStart = p[1] === 2; break;
   }
@@ -948,7 +998,31 @@ function applyUpdates(u) {
   if ('serial'  in u) setText('p-serial', 'S/N: ' + u.serial);
   if ('firmware'in u) setText('p-fw', 'FW: ' + u.firmware);
   if ('voltage' in u) setText('p-voltage', 'Spannung: ' + u.voltage);
-  if ('km'      in u) setText('p-km', u.km + ' km');
+  if ('meters' in u) {
+    const now = Date.now();
+    setText('p-km', (u.meters / 1000).toFixed(3) + ' km');
+
+    metersBuf.push({ m: u.meters, t: now });
+    if (metersBuf.length > 5) metersBuf.shift();
+
+    if (metersBuf.length >= 2) {
+      const speeds = [];
+      for (let i = 0; i < metersBuf.length - 1; i++) {
+        for (let j = i + 1; j < metersBuf.length; j++) {
+          const dt = (metersBuf[j].t - metersBuf[i].t) / 1000;
+          const dm = metersBuf[j].m - metersBuf[i].m;
+          if (dt > 0 && dm > 0) speeds.push((dm / dt) * 3.6);
+        }
+      }
+      const avg = speeds.length > 0
+        ? speeds.reduce((a, b) => a + b, 0) / speeds.length
+        : 0;
+      setText('p-avg', avg.toFixed(1) + ' km/h');
+    }
+
+    lastMeters     = u.meters;
+    lastMetersTime = now;
+  }
   if ('light'   in u) {
     lightOn = u.light;
     setToggleCard('card-light', 't-light', u.light ? 'is-on' : '', u.light ? 'AN' : 'AUS');
@@ -1023,7 +1097,10 @@ function setText(id, val) {
 function setToggleCard(cardId, stateId, activeClass, stateText) {
   const card = document.getElementById(cardId);
   const isLockMode = card.classList.contains('locked');
-  card.className = 'ic-btn' + (activeClass ? ' ' + activeClass : '') + (isLockMode ? ' locked' : '');
+  const isBlinking = card.classList.contains('blinking');
+  card.className = 'ic-btn' + (activeClass ? ' ' + activeClass : '')
+    + (isLockMode ? ' locked' : '')
+    + (isBlinking ? ' blinking' : '');
   setText(stateId, stateText);
 }
 
@@ -1053,7 +1130,49 @@ function log(msg, cls = 'sys') {
 }
 
 
-// ── Spam Mode ────────────────────────────────────
+// ── Blink Mode ───────────────────────────────────
+let blinkTimer = null;
+
+function toggleBlink() {
+  const card = document.getElementById('card-light');
+  if (blinkTimer) {
+    clearInterval(blinkTimer);
+    blinkTimer = null;
+    card.classList.remove('blinking');
+  } else {
+    card.classList.add('blinking');
+    let bs = lightOn;
+
+    function flipBlink() {
+      bs = !bs;
+      const cmd = bs ? 'FF55240101' : 'FF55240100';
+      if (lockIntervals['card-light']) {
+        // lock is active — restart it with the new blink state so it keeps spamming
+        clearInterval(lockIntervals['card-light']);
+        lockIntervals['card-light'] = setInterval(() => send(cmd), 50);
+      } else {
+        send(cmd);
+      }
+    }
+
+    blinkTimer = setInterval(flipBlink, 500);
+  }
+}
+
+function doubleTapWrap(tapFn, doubleFn, ms = 250) {
+  let timer = null;
+  return () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+      doubleFn();
+    } else {
+      timer = setTimeout(() => { timer = null; tapFn(); }, ms);
+    }
+  };
+}
+
+// ── Lock Mode ────────────────────────────────────
 const lockIntervals = {};
 
 function toggleLockMode(id, lockFnFactory) {
@@ -1084,16 +1203,7 @@ function addHoldBehavior(id, tapFn, lockFnFactory) {
 
   el.addEventListener('pointerup', () => {
     clearTimeout(timer);
-    if (!didHold) {
-      tapFn();
-      if (lockIntervals[id]) {
-        // restart spam with updated state
-        clearInterval(lockIntervals[id]);
-        const fn = lockFnFactory();
-        fn();
-        lockIntervals[id] = setInterval(fn, 50);
-      }
-    }
+    if (!didHold) tapFn();
     didHold = false;
   });
 
@@ -1118,7 +1228,7 @@ document.getElementById('custom-input').addEventListener('keydown', e => {
 // tap = normal toggle, hold = spam factory (captures state at hold time)
 addHoldBehavior('mode-pill',   cycleGear,
   () => { const h = currentGear.toString(16).padStart(2,'0').toUpperCase(); return () => send('FF551F01' + h); });
-addHoldBehavior('card-light',  toggleLight,
+addHoldBehavior('card-light',  doubleTapWrap(toggleLight, toggleBlink),
   () => { const cmd = lightOn   ? 'FF55240101' : 'FF55240100'; return () => send(cmd); });
 addHoldBehavior('card-lock',   toggleLock,
   () => { const cmd = locked    ? 'FF55170102' : 'FF55170101'; return () => send(cmd); });
